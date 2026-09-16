@@ -196,6 +196,7 @@ scena "Hra" cesta "/" {
     const elTabNahled = document.getElementById('tabNahled');
 
     let sablonyZapnuto = false;
+    let autoNahledTimeout = null;
 
     function prepniPanel(na){
       if(na === 'nahled'){
@@ -330,6 +331,22 @@ scena "Hra" cesta "/" {
     function akceSpustit(){ try{ sestav(); zprava('Spuštěno bez chyb.'); } catch(e){ zprava('Chyba: '+e.message, 'chyba'); } }
     function akceUlozit(){ localStorage.setItem('opim_one_cz_kod', elKod.value); zprava('Uloženo do localStorage.'); }
 
+    function autoAktualizaceNahledu(){
+      clearTimeout(autoNahledTimeout);
+      autoNahledTimeout = setTimeout(()=>{
+        try{
+          sestav();
+          if(!elNahledLevy.classList.contains('skryt')){
+            zprava('Náhled automaticky aktualizován.');
+          }
+        }catch(e){
+          if(!elNahledLevy.classList.contains('skryt')){
+            zprava('Chyba: '+e.message, 'chyba');
+          }
+        }
+      }, 180);
+    }
+
     async function akceZip(){
       try{
         const s = sestav();
@@ -364,6 +381,8 @@ scena "Hra" cesta "/" {
       });
     });
 
+    elKod.addEventListener('input', autoAktualizaceNahledu);
+
     elTabKod.addEventListener('click', ()=>prepniPanel('kod'));
     elTabNahled.addEventListener('click', ()=>prepniPanel('nahled'));
 
@@ -377,7 +396,7 @@ scena "Hra" cesta "/" {
       elKod.value = ulozeno || START_CISTE;
       prepniPanel('kod');
       akceSpustit();
-      zprava('Hotovo: blok Živý náhled byl odstraněn.');
+      zprava('Hotovo: náhled u kódu se aktualizuje automaticky při psaní.');
     })();
   </script>
 </body>
