@@ -27,7 +27,7 @@
     .sablona strong{display:block}
     .sablona small{color:#666}
 
-    .sit{margin-top:12px;display:grid;grid-template-columns:1.05fr .95fr;gap:12px}
+    .sit{margin-top:12px;display:grid;grid-template-columns:1fr;gap:12px}
     .karta{background:var(--karta);border:1px solid var(--cara);border-radius:16px;overflow:hidden}
     .karta h3{margin:0;padding:10px 12px;border-bottom:1px solid var(--cara);font-size:15px}
 
@@ -39,7 +39,7 @@
     .tab.aktivni{background:#111;color:#fff;border-color:#111}
 
     textarea{width:100%;min-height:570px;border:0;outline:none;padding:12px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;line-height:1.5;background:#171717;color:#e6e6e6}
-    iframe{width:100%;min-height:570px;border:0;background:#fff}
+    iframe{width:100%;min-height:420px;border:0;background:#fff}
     .skryt{display:none}
 
     .stav{margin-top:10px;background:#fff;border:1px solid var(--cara);border-radius:12px;padding:10px 12px;font-size:14px}
@@ -47,7 +47,7 @@
     .pomoc{margin-top:12px;background:#fff;border:1px solid var(--cara);border-radius:16px;padding:10px}
     .cipsy{display:flex;gap:8px;flex-wrap:wrap}
     .cip{background:var(--chip);border:1px solid #cddcff;color:var(--modra);padding:7px 10px;border-radius:10px;font-weight:700;font-size:12px}
-    @media (max-width:960px){.sit{grid-template-columns:1fr}.sablony{grid-template-columns:1fr 1fr}}
+    @media (max-width:960px){.sablony{grid-template-columns:1fr 1fr}}
   </style>
 </head>
 <body>
@@ -81,11 +81,6 @@
         </div>
         <textarea id="kod"></textarea>
         <iframe id="nahledLevy" class="skryt"></iframe>
-      </section>
-
-      <section class="karta">
-        <h3>Živý náhled</h3>
-        <iframe id="nahledVpravo"></iframe>
       </section>
     </div>
 
@@ -190,7 +185,6 @@ scena "Hra" cesta "/" {
 
     const elKod = document.getElementById('kod');
     const elNahledLevy = document.getElementById('nahledLevy');
-    const elNahledVpravo = document.getElementById('nahledVpravo');
     const elStav = document.getElementById('stav');
     const elPrepSablony = document.getElementById('prepSablony');
     const elPanelSablony = document.getElementById('panelSablony');
@@ -330,7 +324,6 @@ scena "Hra" cesta "/" {
       const ast = parseOPIM(elKod.value);
       const soubory = postavSoubory(ast);
       nahledDoIframe(elNahledLevy, soubory);
-      nahledDoIframe(elNahledVpravo, soubory);
       return soubory;
     }
 
@@ -384,7 +377,7 @@ scena "Hra" cesta "/" {
       elKod.value = ulozeno || START_CISTE;
       prepniPanel('kod');
       akceSpustit();
-      zprava('Hotovo: vpravo je živý náhled, text byl odstraněn.');
+      zprava('Hotovo: blok Živý náhled byl odstraněn.');
     })();
   </script>
 </body>
