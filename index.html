@@ -197,6 +197,17 @@ scena "Hra" cesta "/" {
 
     let sablonyZapnuto = false;
     let autoNahledTimeout = null;
+    let chybaZNahledu = null;
+
+    window.addEventListener('message', (e)=>{
+      if(!e || !e.data || e.data.typ !== 'opimNahled') return;
+      if(e.data.stav === 'chyba'){
+        chybaZNahledu = e.data.zprava || 'Neznámá chyba v náhledu.';
+        zprava('Chyba náhledu: '+chybaZNahledu, 'chyba');
+      }else{
+        chybaZNahledu = null;
+      }
+    });
 
     function prepniPanel(na){
       if(na === 'nahled'){
@@ -375,7 +386,10 @@ scena "Hra" cesta "/" {
       const novyNahled = document.createElement('iframe');
       novyNahled.id = 'nahledLevy';
       novyNahled.className = elNahledLevy.className;
-      const src = `<!doctype html><html><head><meta charset="utf-8"/><style>${soubory.css}</style></head><body>${soubory.html.replace('<link rel="stylesheet" href="./styl.css" />','').replace('<script src="./aplikace.js"><\\/script>', `<script>${soubory.js}<\\/script>`)}</body></html>`;
+      const bezpecnyJs = soubory.js.replace(/<\/script/gi, '<\\/script');
+      const bezpecneHtml = soubory.html.replace(/<\/script/gi, '<\\/script');
+      const runtime = `try{${bezpecnyJs};parent.postMessage({typ:'opimNahled',stav:'ok'},'*');}catch(e){document.body.innerHTML='';parent.postMessage({typ:'opimNahled',stav:'chyba',zprava:(e&&e.message?e.message:String(e))},'*');}`;
+      const src = `<!doctype html><html><head><meta charset="utf-8"/><style>${soubory.css}</style></head><body>${bezpecneHtml.replace('<link rel="stylesheet" href="./styl.css" />','').replace('<script src="./aplikace.js"><\\/script>', `<script>${runtime}<\\/script>`)}</body></html>`;
       novyNahled.srcdoc = src;
       elNahledLevy.replaceWith(novyNahled);
       elNahledLevy = novyNahled;
