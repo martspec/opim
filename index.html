@@ -204,6 +204,16 @@ scena "Hra" cesta "/" {
         elNahledLevy.classList.remove('skryt');
         elTabKod.classList.remove('aktivni');
         elTabNahled.classList.add('aktivni');
+        try{
+          const vysledek = sestavNahled();
+          if(vysledek.chyby.length){
+            zprava('Náhled aktualizován částečně (přeskočeno chyb: '+vysledek.chyby.length+').', 'chyba');
+          }else{
+            zprava('Náhled automaticky aktualizován.');
+          }
+        }catch(e){
+          zprava('Chyba: '+e.message, 'chyba');
+        }
       }else{
         elNahledLevy.classList.add('skryt');
         elKod.classList.remove('skryt');
@@ -383,7 +393,7 @@ scena "Hra" cesta "/" {
       return {soubory, chyby:vysledek.chyby};
     }
 
-    function akceSpustit(){ try{ sestav(); zprava('Spuštěno bez chyb.'); } catch(e){ zprava('Chyba: '+e.message, 'chyba'); } }
+    function akceSpustit(){ try{ sestav(); zprava('Spuštěno bez chyb.'); return true; } catch(e){ zprava('Chyba: '+e.message, 'chyba'); return false; } }
     function akceUlozit(){ localStorage.setItem('opim_one_cz_kod', elKod.value); zprava('Uloženo do localStorage.'); }
 
     function autoAktualizaceNahledu(){
@@ -391,17 +401,13 @@ scena "Hra" cesta "/" {
       autoNahledTimeout = setTimeout(()=>{
         try{
           const vysledek = sestavNahled();
-          if(!elNahledLevy.classList.contains('skryt')){
-            if(vysledek.chyby.length){
-              zprava('Náhled aktualizován částečně (přeskočeno chyb: '+vysledek.chyby.length+').', 'chyba');
-            }else{
-              zprava('Náhled automaticky aktualizován.');
-            }
+          if(vysledek.chyby.length){
+            zprava('Náhled aktualizován částečně (přeskočeno chyb: '+vysledek.chyby.length+').', 'chyba');
+          }else{
+            zprava('Náhled automaticky aktualizován.');
           }
         }catch(e){
-          if(!elNahledLevy.classList.contains('skryt')){
-            zprava('Chyba: '+e.message, 'chyba');
-          }
+          zprava('Chyba: '+e.message, 'chyba');
         }
       }, 180);
     }
@@ -454,8 +460,9 @@ scena "Hra" cesta "/" {
       const ulozeno = localStorage.getItem('opim_one_cz_kod');
       elKod.value = ulozeno || START_CISTE;
       prepniPanel('kod');
-      akceSpustit();
-      zprava('Hotovo: náhled u kódu se aktualizuje automaticky při psaní.');
+      if(akceSpustit()){
+        zprava('Hotovo: náhled u kódu se aktualizuje automaticky při psaní.');
+      }
     })();
   </script>
 </body>
