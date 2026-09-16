@@ -229,10 +229,17 @@ scena "Hra" cesta "/" {
       return t;
     }
 
-    function parseOPIM(kod){
+    function parseOPIM(kod, moznosti = {}){
+      const tolerantni = !!moznosti.tolerantni;
       const radky = kod.replace(/\r/g,'').split('\n');
       let i = 0;
       const ast = { aplikace:'OPIM', tema:'svetle', stavy:{}, funkce:{}, stranky:[] };
+      const chyby = [];
+
+      function zaznamenejChybu(text){
+        if(tolerantni){ chyby.push(text); return; }
+        throw new Error(text);
+      }
 
       function parsePrikaz(prikaz, cilUzlu){
         let m;
@@ -255,57 +262,71 @@ scena "Hra" cesta "/" {
 
         if((m = r.match(/^funkce\s+([a-zA-Z_]\w*)\(\)\s*\{$/i))){
           const nazev = m[1], telo = []; i++;
+          let uzavreno = false;
           while(i < radky.length){
             const rr = radky[i].trim();
             if(!rr){ i++; continue; }
-            if(rr === '}'){ i++; break; }
+            if(rr === '}'){ i++; uzavreno = true; break; }
             if(parsePrikaz(rr, telo)){ i++; continue; }
             if(/^([a-zA-Z_]\w*)\s*=\s*(.+)$/.test(rr)){ telo.push({typ:'vyraz', kod:rr}); i++; continue; }
-            throw new Error('Neznámý příkaz ve funkci na řádku '+(i+1)+': '+rr);
+            zaznamenejChybu('Neznámý příkaz ve funkci na řádku '+(i+1)+': '+rr);
+            i++;
           }
+          if(!uzavreno) zaznamenejChybu('Neuzavřená funkce "'+nazev+'" (chybí }).');
           ast.funkce[nazev] = telo; continue;
         }
 
         if((m = r.match(/^(obrazovka|scena)\s+"([^"]+)"\s+cesta\s+"([^"]+)"\s*\{$/i))){
           const stranka = {druh:m[1].toLowerCase(), nazev:m[2], cesta:m[3], uzly:[]};
           i++;
+          let uzavreno = false;
           while(i < radky.length){
             const rr = radky[i].trim();
             if(!rr){ i++; continue; }
-            if(rr === '}'){ i++; break; }
+            if(rr === '}'){ i++; uzavreno = true; break; }
             let x;
             if(parsePrikaz(rr, stranka.uzly)){ i++; continue; }
             if((x = rr.match(/^kdyz\s*\((.+)\)\s*\{$/i))){
               const deti=[]; const podminka=x[1].trim(); i++;
+              let blokUzavren = false;
               while(i < radky.length){
                 const kr = radky[i].trim();
                 if(!kr){ i++; continue; }
-                if(kr === '}'){ i++; break; }
+                if(kr === '}'){ i++; blokUzavren = true; break; }
                 if(parsePrikaz(kr, deti)){ i++; continue; }
-                throw new Error('Neznámý příkaz v bloku kdyz na řádku '+(i+1)+': '+kr);
+                zaznamenejChybu('Neznámý příkaz v bloku kdyz na řádku '+(i+1)+': '+kr);
+                i++;
               }
+              if(!blokUzavren) zaznamenejChybu('Neuzavřený blok kdyz na řádku '+(i+1)+'.');
               stranka.uzly.push({typ:'kdyz', podminka, deti}); continue;
             }
             if((x = rr.match(/^opakuj\s+(\d+)\s*\{$/i))){
               const deti=[]; const kolik=Number(x[1]); i++;
+              let blokUzavren = false;
               while(i < radky.length){
                 const or = radky[i].trim();
                 if(!or){ i++; continue; }
-                if(or === '}'){ i++; break; }
+                if(or === '}'){ i++; blokUzavren = true; break; }
                 if(parsePrikaz(or, deti)){ i++; continue; }
-                throw new Error('Neznámý příkaz v bloku opakuj na řádku '+(i+1)+': '+or);
+                zaznamenejChybu('Neznámý příkaz v bloku opakuj na řádku '+(i+1)+': '+or);
+                i++;
               }
+              if(!blokUzavren) zaznamenejChybu('Neuzavřený blok opakuj na řádku '+(i+1)+'.');
               stranka.uzly.push({typ:'opakuj', kolik, deti}); continue;
             }
-            throw new Error('Neznámý příkaz na řádku '+(i+1)+': '+rr);
+            zaznamenejChybu('Neznámý příkaz na řádku '+(i+1)+': '+rr);
+            i++;
           }
+          if(!uzavreno) zaznamenejChybu('Neuzavřená obrazovka/scéna "'+stranka.nazev+'" (chybí }).');
           ast.stranky.push(stranka); continue;
         }
 
-        throw new Error('Neznámý příkaz na řádku '+(i+1)+': '+r);
+        zaznamenejChybu('Neznámý příkaz na řádku '+(i+1)+': '+r);
+        i++;
       }
 
-      if(!ast.stranky.length) throw new Error('Chybí obrazovka nebo scéna.');
+      if(!ast.stranky.length) zaznamenejChybu('Chybí obrazovka nebo scéna.');
+      if(tolerantni) return {ast, chyby};
       return ast;
     }
 
@@ -328,6 +349,16 @@ scena "Hra" cesta "/" {
       return soubory;
     }
 
+    function sestavNahled(){
+      const vysledek = parseOPIM(elKod.value, {tolerantni:true});
+      if(!vysledek.ast.stranky.length){
+        throw new Error(vysledek.chyby[0] || 'Chybí obrazovka nebo scéna.');
+      }
+      const soubory = postavSoubory(vysledek.ast);
+      nahledDoIframe(elNahledLevy, soubory);
+      return {soubory, chyby:vysledek.chyby};
+    }
+
     function akceSpustit(){ try{ sestav(); zprava('Spuštěno bez chyb.'); } catch(e){ zprava('Chyba: '+e.message, 'chyba'); } }
     function akceUlozit(){ localStorage.setItem('opim_one_cz_kod', elKod.value); zprava('Uloženo do localStorage.'); }
 
@@ -335,9 +366,13 @@ scena "Hra" cesta "/" {
       clearTimeout(autoNahledTimeout);
       autoNahledTimeout = setTimeout(()=>{
         try{
-          sestav();
+          const vysledek = sestavNahled();
           if(!elNahledLevy.classList.contains('skryt')){
-            zprava('Náhled automaticky aktualizován.');
+            if(vysledek.chyby.length){
+              zprava('Náhled aktualizován částečně (přeskočeno chyb: '+vysledek.chyby.length+').', 'chyba');
+            }else{
+              zprava('Náhled automaticky aktualizován.');
+            }
           }
         }catch(e){
           if(!elNahledLevy.classList.contains('skryt')){
