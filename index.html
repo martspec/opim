@@ -241,6 +241,14 @@ scena "Hra" cesta "/" {
         throw new Error(text);
       }
 
+      function jeNovaTopUroven(rr){
+        return /^aplikace\s+"([^"]+)"$/i.test(rr)
+          || /^tema\s+"(svetle|tmave)"$/i.test(rr)
+          || /^stav\s+([a-zA-Z_]\w*)\s*:\s*(cislo|text|pravda)\s*=\s*(.+)$/i.test(rr)
+          || /^funkce\s+([a-zA-Z_]\w*)\(\)\s*\{$/i.test(rr)
+          || /^(obrazovka|scena)\s+"([^"]+)"\s+cesta\s+"([^"]+)"\s*\{$/i.test(rr);
+      }
+
       function parsePrikaz(prikaz, cilUzlu){
         let m;
         if((m = prikaz.match(/^nadpis\s+"([^"]+)"$/i))) { cilUzlu.push({typ:'nadpis', text:m[1]}); return true; }
@@ -267,6 +275,10 @@ scena "Hra" cesta "/" {
             const rr = radky[i].trim();
             if(!rr){ i++; continue; }
             if(rr === '}'){ i++; uzavreno = true; break; }
+            if(tolerantni && jeNovaTopUroven(rr)){
+              zaznamenejChybu('Funkce "'+nazev+'" se ukončila nouzově na řádku '+(i+1)+' (chybí }).');
+              break;
+            }
             if(parsePrikaz(rr, telo)){ i++; continue; }
             if(/^([a-zA-Z_]\w*)\s*=\s*(.+)$/.test(rr)){ telo.push({typ:'vyraz', kod:rr}); i++; continue; }
             zaznamenejChybu('Neznámý příkaz ve funkci na řádku '+(i+1)+': '+rr);
@@ -284,6 +296,10 @@ scena "Hra" cesta "/" {
             const rr = radky[i].trim();
             if(!rr){ i++; continue; }
             if(rr === '}'){ i++; uzavreno = true; break; }
+            if(tolerantni && jeNovaTopUroven(rr)){
+              zaznamenejChybu('Obrazovka/scéna "'+stranka.nazev+'" se ukončila nouzově na řádku '+(i+1)+' (chybí }).');
+              break;
+            }
             let x;
             if(parsePrikaz(rr, stranka.uzly)){ i++; continue; }
             if((x = rr.match(/^kdyz\s*\((.+)\)\s*\{$/i))){
@@ -293,6 +309,10 @@ scena "Hra" cesta "/" {
                 const kr = radky[i].trim();
                 if(!kr){ i++; continue; }
                 if(kr === '}'){ i++; blokUzavren = true; break; }
+                if(tolerantni && jeNovaTopUroven(kr)){
+                  zaznamenejChybu('Blok kdyz se ukončil nouzově na řádku '+(i+1)+' (chybí }).');
+                  break;
+                }
                 if(parsePrikaz(kr, deti)){ i++; continue; }
                 zaznamenejChybu('Neznámý příkaz v bloku kdyz na řádku '+(i+1)+': '+kr);
                 i++;
@@ -307,6 +327,10 @@ scena "Hra" cesta "/" {
                 const or = radky[i].trim();
                 if(!or){ i++; continue; }
                 if(or === '}'){ i++; blokUzavren = true; break; }
+                if(tolerantni && jeNovaTopUroven(or)){
+                  zaznamenejChybu('Blok opakuj se ukončil nouzově na řádku '+(i+1)+' (chybí }).');
+                  break;
+                }
                 if(parsePrikaz(or, deti)){ i++; continue; }
                 zaznamenejChybu('Neznámý příkaz v bloku opakuj na řádku '+(i+1)+': '+or);
                 i++;
