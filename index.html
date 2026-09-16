@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OPIM ONE v1.1 MEGA CZ</title>
+  <style>
+    :root{
+      --pozadi:#f5f3ee; --karta:#fffdf9; --text:#151515; --tlumeny:#666; --cara:#ece8dd;
+      --oranzova:#ef5a2b; --modra:#1f5fff; --tmava:#111; --chip:#eaf0ff;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--pozadi);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+    .obal{max-width:1160px;margin:0 auto;padding:14px}
+    .horni{
+      display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;
+      background:#fff;border:1px solid var(--cara);border-radius:14px;padding:10px 12px
+    }
+    .znacka{font-size:22px;font-weight:900}
+    .znacka small{font-size:14px;font-weight:700;color:var(--tlumeny)}
+    .nastroje{display:flex;gap:8px;flex-wrap:wrap}
+    .tl{
+      border:1px solid var(--cara);background:#fff;border-radius:12px;padding:10px 14px;
+      font-weight:800;cursor:pointer
+    }
+    .tl.spustit{background:#111;color:#fff;border-color:#111}
+    .tl.publikovat{background:var(--oranzova);color:#fff;border-color:var(--oranzova)}
+    .tl.prepinac{background:#f6f7ff;border-color:#d8deff;color:#2a4de0}
+
+    .sablony{
+      margin-top:10px;display:none;grid-template-columns:repeat(4,1fr);gap:10px
+    }
+    .sablony.zobraz{display:grid}
+    .sablona{
+      background:#fff;border:1px solid var(--cara);border-radius:14px;padding:10px;cursor:pointer
+    }
+    .sablona strong{display:block}
+    .sablona small{color:#666}
+
+    .sit{margin-top:12px;display:grid;grid-template-columns:1.05fr .95fr;gap:12px}
+    .karta{background:var(--karta);border:1px solid var(--cara);border-radius:16px;overflow:hidden}
+    .karta h3{margin:0;padding:10px 12px;border-bottom:1px solid var(--cara);font-size:15px}
+    textarea{
+      width:100%;min-height:570px;border:0;outline:none;padding:12px;resize:vertical;
+      font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;line-height:1.5;
+      background:#171717;color:#e6e6e6
+    }
+    iframe{width:100%;min-height:570px;border:0;background:#fff}
+    .stav{margin-top:10px;background:#fff;border:1px solid var(--cara);border-radius:12px;padding:10px 12px;font-size:14px}
+    .ok{color:#0a8f5b}.chyba{color:#b42318}
+    .pomoc{margin-top:12px;background:#fff;border:1px solid var(--cara);border-radius:16px;padding:10px}
+    .cipsy{display:flex;gap:8px;flex-wrap:wrap}
+    .cip{background:var(--chip);border:1px solid #cddcff;color:var(--modra);padding:7px 10px;border-radius:10px;font-weight:700;font-size:12px}
+    @media (max-width:960px){.sit{grid-template-columns:1fr}.sablony{grid-template-columns:1fr 1fr}}
+  </style>
+</head>
+<body>
+  <div class="obal">
+    <div class="horni">
+      <div class="znacka">OPIM ONE <small>v1.1 MEGA CZ • vše česky</small></div>
+      <div class="nastroje">
+        <button class="tl prepinac" id="prepSablony">Šablony: VYPNUTO</button>
+        <button class="tl spustit" id="tlSpustit">Spustit</button>
+        <button class="tl" id="tlUlozit">Uložit</button>
+        <button class="tl" id="tlZip">ZIP</button>
+        <button class="tl publikovat" id="tlPublikovat">Publikovat</button>
+      </div>
+    </div>
+
+    <div class="sablony" id="panelSablony">
+      <div class="sablona" data-sablona="ciste"><strong>Čisté plátno</strong><small>Prázdný start</small></div>
+      <div class="sablona" data-sablona="web"><strong>Web</strong><small>Obsah a odkazy</small></div>
+      <div class="sablona" data-sablona="aplikace"><strong>Aplikace</strong><small>Vstupy a akce</small></div>
+      <div class="sablona" data-sablona="hra"><strong>Hra</strong><small>Scéna + body</small></div>
+    </div>
+
+    <div class="sit">
+      <section class="karta">
+        <h3>Kód (jazyk OPIM ONE CZ)</h3>
+        <textarea id="kod"></textarea>
+      </section>
+      <section class="karta">
+        <h3>Náhled</h3>
+        <iframe id="nahled"></iframe>
+      </section>
+    </div>
+
+    <div class="pomoc">
+      <div class="cipsy">
+        <span class="cip">aplikace "Název"</span>
+        <span class="cip">tema "svetle|tmave"</span>
+        <span class="cip">stav body: cislo = 0</span>
+        <span class="cip">obrazovka "Domů" cesta "/" { ... }</span>
+        <span class="cip">scena "Hra" cesta "/hra" { ... }</span>
+        <span class="cip">kdyz (body &gt;= 10) { ... }</span>
+        <span class="cip">opakuj 3 { text "..." }</span>
+        <span class="cip">funkce pozdrav() { ... }</span>
+        <span class="cip">volej pozdrav()</span>
+      </div>
+    </div>
+
+    <div id="stav" class="stav">Připraveno.</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script>
+    const START_CISTE = `aplikace "Nový projekt"
+tema "svetle"
+
+obrazovka "Domů" cesta "/" {
+  nadpis "Ahoj OPIM ONE"
+  text "Začni psát svůj projekt."
+}
+`;
+
+    const SABLONY = {
+      ciste: START_CISTE,
+      web: `aplikace "Můj web"
+tema "svetle"
+
+stav navstevy: cislo = 0
+
+obrazovka "Domů" cesta "/" {
+  nadpis "Vítej"
+  text "Tohle je web vytvořený v OPIM ONE."
+  tlacitko "Navštívil jsem stránku" pri klik => navstevy = navstevy + 1
+  text "Počet návštěv: {navstevy}"
+  odkaz "Kontakt" na "/kontakt"
+}
+
+obrazovka "Kontakt" cesta "/kontakt" {
+  nadpis "Kontakt"
+  text "Napiš nám na info@example.com"
+  tlacitko "Zpět" pri klik => jdi("/")
+}
+`,
+      aplikace: `aplikace "Moje aplikace"
+tema "svetle"
+
+stav jmeno: text = ""
+stav pro: pravda = nepravda
+
+funkce prepniPro() {
+  pro = !pro
+}
+
+obrazovka "Profil" cesta "/" {
+  nadpis "Uživatelský profil"
+  vstup jmeno placeholder "Napiš jméno"
+  tlacitko "Přepnout PRO" pri klik => volej prepniPro()
+  text "Jméno: {jmeno}"
+
+  kdyz (pro == pravda) {
+    text "Status: PRO"
+  }
+
+  kdyz (pro != pravda) {
+    text "Status: FREE"
+  }
+}
+`,
+      hra: `aplikace "Klikací hra"
+tema "tmave"
+
+stav body: cislo = 0
+
+funkce pridejBod() {
+  body = body + 1
+}
+
+scena "Hra" cesta "/" {
+  nadpis "Sbírej body"
+  text "Body: {body}"
+  tlacitko "Přidej bod" pri klik => volej pridejBod()
+
+  opakuj 2 {
+    text "Tip: klikej rychle!"
+  }
+
+  kdyz (body >= 10) {
+    text "Výhra! Máš 10+ bodů."
+  }
+}
+`
+    };
+
+    const elKod = document.getElementById('kod');
+    const elNahled = document.getElementById('nahled');
+    const elStav = document.getElementById('stav');
+    const elPrepSablony = document.getElementById('prepSablony');
+    const elPanelSablony = document.getElementById('panelSablony');
+    const elSpustit = document.getElementById('tlSpustit');
+    const elUlozit = document.getElementById('tlUlozit');
+    const elZip = document.getElementById('tlZip');
+    const elPublikovat = document.getElementById('tlPublikovat');
+
+    let sablonyZapnuto = false;
+
+    function zprava(t, typ='ok'){
+      elStav.innerHTML = '<span class="'+(typ==='chyba'?'chyba':'ok')+'">'+t+'</span>';
+    }
+
+    function unik(s){
+      return String(s)
+        .replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')
+        .replaceAll('"','&quot;').replaceAll("'",'&#39;');
+    }
+
+    function prevedHodnotu(v){
+      const t = v.trim();
+      if(/^".*"$/.test(t)) return t.slice(1,-1);
+      if(/^-?\d+(\.\d+)?$/.test(t)) return Number(t);
+      if(t === 'pravda') return true;
+      if(t === 'nepravda') return false;
+      return t;
+    }
+
+    function parseOPIM(kod){
+      const radky = kod.replace(/\r/g,'').split('\n');
+      let i = 0;
+
+      const ast = {
+        aplikace: 'OPIM',
+        tema: 'svetle',
+        stavy: {},
+        funkce: {},
+        stranky: []
+      };
+
+      function parsePrikaz(prikaz, cilUzlu){
+        let m;
+        if((m = prikaz.match(/^nadpis\s+"([^"]+)"$/i))) { cilUzlu.push({typ:'nadpis', text:m[1]}); return true; }
+        if((m = prikaz.match(/^text\s+"([^"]+)"$/i))) { cilUzlu.push({typ:'text', text:m[1]}); return true; }
+        if((m = prikaz.match(/^odkaz\s+"([^"]+)"\s+na\s+"([^"]+)"$/i))) { cilUzlu.push({typ:'odkaz', text:m[1], cesta:m[2]}); return true; }
+        if((m = prikaz.match(/^vstup\s+([a-zA-Z_]\w*)\s+placeholder\s+"([^"]+)"$/i))) {
+          if(!(m[1] in ast.stavy)) ast.stavy[m[1]] = '';
+          cilUzlu.push({typ:'vstup', vazba:m[1], placeholder:m[2]}); return true;
+        }
+        if((m = prikaz.match(/^tlacitko\s+"([^"]+)"\s+pri\s+klik\s*=>\s*(.+)$/i))) {
+          cilUzlu.push({typ:'tlacitko', text:m[1], akce:m[2]}); return true;
+        }
+        if((m = prikaz.match(/^volej\s+([a-zA-Z_]\w*)\(\)\s*$/i))) {
+          cilUzlu.push({typ:'volej', funkce:m[1]}); return true;
+        }
+        return false;
+      }
+
+      while(i < radky.length){
+        let r = radky[i].trim();
+        if(!r || r.startsWith('//') || r.startsWith('#')) { i++; continue; }
+
+        let m;
+        if((m = r.match(/^aplikace\s+"([^"]+)"$/i))) { ast.aplikace = m[1]; i++; continue; }
+        if((m = r.match(/^tema\s+"(svetle|tmave)"$/i))) { ast.tema = m[1]; i++; continue; }
+
+        if((m = r.match(/^stav\s+([a-zA-Z_]\w*)\s*:\s*(cislo|text|pravda)\s*=\s*(.+)$/i))){
+          ast.stavy[m[1]] = prevedHodnotu(m[3]); i++; continue;
+        }
+
+        if((m = r.match(/^funkce\s+([a-zA-Z_]\w*)\(\)\s*\{$/i))){
+          const nazev = m[1];
+          const telo = [];
+          i++;
+          while(i < radky.length){
+            const rr = radky[i].trim();
+            if(!rr){ i++; continue; }
+            if(rr === '}'){ i++; break; }
+
+            if(parsePrikaz(rr, telo)){ i++; continue; }
+            if(/^([a-zA-Z_]\w*)\s*=\s*(.+)$/.test(rr)){ telo.push({typ:'vyraz', kod:rr}); i++; continue; }
+
+            throw new Error('Neznámý příkaz ve funkci na řádku '+(i+1)+': '+rr);
+          }
+          ast.funkce[nazev] = telo;
+          continue;
+        }
+
+        if((m = r.match(/^(obrazovka|scena)\s+"([^"]+)"\s+cesta\s+"([^"]+)"\s*\{$/i))){
+          const druh = m[1].toLowerCase();
+          const stranka = {druh, nazev:m[2], cesta:m[3], uzly:[]};
+          i++;
+
+          while(i < radky.length){
+            const rr = radky[i].trim();
+            if(!rr){ i++; continue; }
+            if(rr === '}'){ i++; break; }
+
+            let x;
+            if(parsePrikaz(rr, stranka.uzly)){ i++; continue; }
+
+            if((x = rr.match(/^kdyz\s*\((.+)\)\s*\{$/i))){
+              const podminka = x[1].trim();
+              const deti = [];
+              i++;
+              while(i < radky.length){
+                const kr = radky[i].trim();
+                if(!kr){ i++; continue; }
+                if(kr === '}'){ i++; break; }
+
+                if(parsePrikaz(kr, deti)){ i++; continue; }
+                throw new Error('Neznámý příkaz v bloku kdyz na řádku '+(i+1)+': '+kr);
+              }
+              stranka.uzly.push({typ:'kdyz', podminka, deti});
+              continue;
+            }
+
+            if((x = rr.match(/^opakuj\s+(\d+)\s*\{$/i))){
+              const kolik = Number(x[1]);
+              const deti = [];
+              i++;
+              while(i < radky.length){
+                const or = radky[i].trim();
+                if(!or){ i++; continue; }
+                if(or === '}'){ i++; break; }
+
+                if(parsePrikaz(or, deti)){ i++; continue; }
+                throw new Error('Neznámý příkaz v bloku opakuj na řádku '+(i+1)+': '+or);
+              }
+              stranka.uzly.push({typ:'opakuj', kolik, deti});
+              continue;
+            }
+
+            throw new Error('Neznámý příkaz na řádku '+(i+1)+': '+rr);
+          }
+
+          ast.stranky.push(stranka);
+          continue;
+        }
+
+        throw new Error('Neznámý příkaz na řádku '+(i+1)+': '+r);
+      }
+
+      if(!ast.stranky.length) throw new Error('Chybí obrazovka nebo scéna.');
+      return ast;
+    }
+
+    function postavSoubory(ast){
+      const styl = `
+:root{
+  --pozadi:${ast.tema === 'tmave' ? '#101010' : '#f7f7f7'};
+  --karta:${ast.tema === 'tmave' ? '#171717' : '#ffffff'};
+  --text:${ast.tema === 'tmave' ? '#f1f1f1' : '#141414'};
+  --cara:${ast.tema === 'tmave' ? '#2a2a2a' : '#e8e8e8'};
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--pozadi);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
+.obal{max-width:920px;margin:0 auto;padding:20px}
+.karta{background:var(--karta);border:1px solid var(--cara);border-radius:16px;padding:16px}
+.meta{font-size:13px;color:#777;margin-bottom:8px}
+h1{margin:0 0 8px 0;font-size:34px}
+p{font-size:18px;line-height:1.45;margin:10px 0}
+.radek{display:flex;gap:10px;margin:10px 0;flex-wrap:wrap}
+button{border:0;border-radius:12px;padding:11px 14px;background:#111;color:#fff;font-weight:700;cursor:pointer}
+input{border:1px solid #ccc;border-radius:12px;padding:11px 12px;min-width:240px}
+a{color:#2451d6;text-decoration:none;font-weight:700;cursor:pointer;display:inline-block;margin-top:8px}
+      `.trim();
+
+      const html = `
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>${unik(ast.aplikace)}</title>
+  <link rel="stylesheet" href="./styl.css" />
+</head>
+<body>
+  <div class="obal">
+    <div class="karta">
+      <div class="meta">${unik(ast.aplikace)} • OPIM ONE CZ export</div>
+      <div id="aplikace"></div>
+    </div>
+  </div>
+  <script src="./aplikace.js"><\/script>
+</body>
+</html>
+      `.trim();
+
+      const js = `
+const AST = ${JSON.stringify(ast, null, 2)};
+const stav = {...AST.stavy};
+let aktualniCesta = AST.stranky[0].cesta;
+
+function sablona(txt){
+  return String(txt).replace(/\\{([a-zA-Z_]\\w*)\\}/g, (_,k)=> (k in stav ? stav[k] : ""));
+}
+
+function vyhodnotPodminku(vyraz){
+  const cisty = vyraz
+    .replace(/\\bpravda\\b/g, 'true')
+    .replace(/\\bnepravda\\b/g, 'false')
+    .replace(/\\b([a-zA-Z_]\\w*)\\b/g, (m)=>{
+      if(m === 'true' || m === 'false') return m;
+      if(Object.prototype.hasOwnProperty.call(stav,m)) return JSON.stringify(stav[m]);
+      return m;
+    });
+  try{ return !!Function('return (' + cisty + ')')(); }catch{return false;}
+}
+
+function provedVyraz(kod){
+  const a = kod.trim();
+
+  let m = a.match(/^jdi\\("([^"]+)"\\)$/);
+  if(m){ aktualniCesta = m[1]; vykresli(); return; }
+
+  m = a.match(/^([a-zA-Z_]\\w*)\\s*=\\s*!([a-zA-Z_]\\w*)$/);
+  if(m){ stav[m[1]] = !stav[m[2]]; vykresli(); return; }
+
+  m = a.match(/^([a-zA-Z_]\\w*)\\s*=\\s*([a-zA-Z_]\\w*)\\s*\\+\\s*(-?\\d+(?:\\.\\d+)?)$/);
+  if(m){ stav[m[1]] = Number(stav[m[2]]||0) + Number(m[3]); vykresli(); return; }
+
+  m = a.match(/^([a-zA-Z_]\\w*)\\s*=\\s*"([^"]*)"$/);
+  if(m){ stav[m[1]] = m[2]; vykresli(); return; }
+
+  m = a.match(/^([a-zA-Z_]\\w*)\\s*=\\s*(pravda|nepravda|-?\\d+(?:\\.\\d+)?)$/);
+  if(m){
+    const v = m[2] === 'pravda' ? true : (m[2] === 'nepravda' ? false : Number(m[2]));
+    stav[m[1]] = v; vykresli(); return;
+  }
+
+  console.warn('Neznámý výraz:', a);
+}
+
+function spustFunkci(nazev){
+  const telo = AST.funkce[nazev];
+  if(!telo){ console.warn('Funkce neexistuje:', nazev); return; }
+  for(const p of telo){
+    if(p.typ === 'volej'){ spustFunkci(p.funkce); continue; }
+    if(p.typ === 'vyraz'){ provedVyraz(p.kod); continue; }
+  }
+}
+
+function vykresliUzel(u, koren){
+  if(u.typ === 'nadpis'){
+    const h = document.createElement('h1'); h.textContent = sablona(u.text); koren.appendChild(h); return;
+  }
+  if(u.typ === 'text'){
+    const p = document.createElement('p'); p.textContent = sablona(u.text); koren.appendChild(p); return;
+  }
+  if(u.typ === 'vstup'){
+    const r = document.createElement('div'); r.className = 'radek';
+    const inp = document.createElement('input');
+    inp.placeholder = u.placeholder;
+    inp.value = stav[u.vazba] ?? '';
+    inp.oninput = (e)=>{ stav[u.vazba] = e.target.value; vykresli(); };
+    r.appendChild(inp); koren.appendChild(r); return;
+  }
+  if(u.typ === 'tlacitko'){
+    const r = document.createElement('div'); r.className = 'radek';
+    const b = document.createElement('button');
+    b.textContent = sablona(u.text);
+    b.onclick = ()=>{
+      const akce = u.akce.trim();
+      let m = akce.match(/^volej\\s+([a-zA-Z_]\\w*)\\(\\)$/);
+      if(m){ spustFunkci(m[1]); return; }
+      provedVyraz(akce);
+    };
+    r.appendChild(b); koren.appendChild(r); return;
+  }
+  if(u.typ === 'odkaz'){
+    const a = document.createElement('a');
+    a.textContent = sablona(u.text);
+    a.onclick = ()=>{ aktualniCesta = u.cesta; vykresli(); };
+    koren.appendChild(a); return;
+  }
+  if(u.typ === 'kdyz'){
+    if(vyhodnotPodminku(u.podminka)) u.deti.forEach(d=>vykresliUzel(d,koren));
+    return;
+  }
+  if(u.typ === 'opakuj'){
+    for(let i=0;i<u.kolik;i++) u.deti.forEach(d=>vykresliUzel(d,koren));
+    return;
+  }
+  if(u.typ === 'volej'){
+    spustFunkci(u.funkce); return;
+  }
+}
+
+function vykresli(){
+  const cil = document.getElementById('aplikace');
+  cil.innerHTML = '';
+  const stranka = AST.stranky.find(s=>s.cesta===aktualniCesta) || AST.stranky[0];
+  stranka.uzly.forEach(u=>vykresliUzel(u,cil));
+}
+vykresli();
+      `.trim();
+
+      return { html, css: styl, js };
+    }
+
+    function nahled(soubory){
+      const src = `
+<!doctype html>
+<html>
+<head><meta charset="utf-8"/><style>${soubory.css}</style></head>
+<body>
+${soubory.html
+  .replace('<link rel="stylesheet" href="./styl.css" />','')
+  .replace('<script src="./aplikace.js"><\\/script>', `<script>${soubory.js}<\\/script>`)}
+</body></html>`.trim();
+      elNahled.srcdoc = src;
+    }
+
+    function sestav(){
+      const ast = parseOPIM(elKod.value);
+      const soubory = postavSoubory(ast);
+      nahled(soubory);
+      return soubory;
+    }
+
+    function akceSpustit(){
+      try{ sestav(); zprava('Spuštěno bez chyb.'); }
+      catch(e){ zprava('Chyba: '+e.message, 'chyba'); }
+    }
+
+    function akceUlozit(){
+      localStorage.setItem('opim_one_cz_kod', elKod.value);
+      zprava('Uloženo do localStorage.');
+    }
+
+    async function akceZip(){
+      try{
+        const s = sestav();
+        if(!window.JSZip) throw new Error('JSZip se nenačetl.');
+
+        const zip = new JSZip();
+        zip.file('index.html', s.html);
+        zip.file('styl.css', s.css);
+        zip.file('aplikace.js', s.js);
+        zip.file('README.txt',
+`OPIM ONE v1.1 MEGA CZ export
+
+Obsah:
+- index.html
+- styl.css
+- aplikace.js
+
+Nasazení na obyč hosting:
+1) Rozbal ZIP
+2) Nahraj soubory do public_html (FTP/cPanel)
+3) Otevři doménu
+`);
+        const blob = await zip.generateAsync({type:'blob'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'opim-one-cz-export.zip';
+        a.click();
+        URL.revokeObjectURL(a.href);
+
+        zprava('ZIP stažen: opim-one-cz-export.zip');
+      }catch(e){
+        zprava('ZIP chyba: '+e.message, 'chyba');
+      }
+    }
+
+    function akcePublikovat(){
+      try{
+        sestav();
+        zprava('Publikace připravena: stáhni ZIP a nahraj na hosting.');
+        alert('Publikace:\n1) Klikni ZIP\n2) Nahraj index.html, styl.css, aplikace.js na FTP hosting');
+      }catch(e){
+        zprava('Nejdřív oprav chyby: '+e.message, 'chyba');
+      }
+    }
+
+    elPrepSablony.addEventListener('click', ()=>{
+      sablonyZapnuto = !sablonyZapnuto;
+      elPanelSablony.classList.toggle('zobraz', sablonyZapnuto);
+      elPrepSablony.textContent = sablonyZapnuto ? 'Šablony: ZAPNUTO' : 'Šablony: VYPNUTO';
+    });
+
+    document.querySelectorAll('.sablona').forEach(k=>{
+      k.addEventListener('click', ()=>{
+        const typ = k.getAttribute('data-sablona');
+        elKod.value = SABLONY[typ] || START_CISTE;
+        akceSpustit();
+      });
+    });
+
+    elSpustit.addEventListener('click', akceSpustit);
+    elUlozit.addEventListener('click', akceUlozit);
+    elZip.addEventListener('click', akceZip);
+    elPublikovat.addEventListener('click', akcePublikovat);
+
+    (function start(){
+      const ulozeno = localStorage.getItem('opim_one_cz_kod');
+      elKod.value = ulozeno || START_CISTE;
+      akceSpustit();
+      zprava('Čisté plátno aktivní. Vše je česky (UI i jazyk).');
+    })();
+  </script>
+</body>
+</html>
