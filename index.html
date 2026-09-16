@@ -12,28 +12,18 @@
     *{box-sizing:border-box}
     body{margin:0;background:var(--pozadi);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
     .obal{max-width:1160px;margin:0 auto;padding:14px}
-    .horni{
-      display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;
-      background:#fff;border:1px solid var(--cara);border-radius:14px;padding:10px 12px
-    }
+    .horni{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;background:#fff;border:1px solid var(--cara);border-radius:14px;padding:10px 12px}
     .znacka{font-size:22px;font-weight:900}
     .znacka small{font-size:14px;font-weight:700;color:var(--tlumeny)}
     .nastroje{display:flex;gap:8px;flex-wrap:wrap}
-    .tl{
-      border:1px solid var(--cara);background:#fff;border-radius:12px;padding:10px 14px;
-      font-weight:800;cursor:pointer
-    }
+    .tl{border:1px solid var(--cara);background:#fff;border-radius:12px;padding:10px 14px;font-weight:800;cursor:pointer}
     .tl.spustit{background:#111;color:#fff;border-color:#111}
     .tl.publikovat{background:var(--oranzova);color:#fff;border-color:var(--oranzova)}
     .tl.prepinac{background:#f6f7ff;border-color:#d8deff;color:#2a4de0}
 
-    .sablony{
-      margin-top:10px;display:none;grid-template-columns:repeat(4,1fr);gap:10px
-    }
+    .sablony{margin-top:10px;display:none;grid-template-columns:repeat(4,1fr);gap:10px}
     .sablony.zobraz{display:grid}
-    .sablona{
-      background:#fff;border:1px solid var(--cara);border-radius:14px;padding:10px;cursor:pointer
-    }
+    .sablona{background:#fff;border:1px solid var(--cara);border-radius:14px;padding:10px;cursor:pointer}
     .sablona strong{display:block}
     .sablona small{color:#666}
 
@@ -41,24 +31,14 @@
     .karta{background:var(--karta);border:1px solid var(--cara);border-radius:16px;overflow:hidden}
     .karta h3{margin:0;padding:10px 12px;border-bottom:1px solid var(--cara);font-size:15px}
 
-    .hlavicka-kodu{
-      display:flex;align-items:center;justify-content:space-between;gap:8px;
-      padding:8px 10px;border-bottom:1px solid var(--cara);background:#faf9f6
-    }
+    .hlavicka-kodu{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-bottom:1px solid var(--cara);background:#faf9f6}
     .karta .bez-spodni{border-bottom:0}
 
     .karty-prepinac{display:flex;gap:8px}
-    .tab{
-      border:1px solid var(--cara);background:#fff;border-radius:10px;padding:8px 12px;
-      font-weight:800;cursor:pointer;font-size:13px;color:#555
-    }
+    .tab{border:1px solid var(--cara);background:#fff;border-radius:10px;padding:8px 12px;font-weight:800;cursor:pointer;font-size:13px;color:#555}
     .tab.aktivni{background:#111;color:#fff;border-color:#111}
 
-    textarea{
-      width:100%;min-height:570px;border:0;outline:none;padding:12px;resize:vertical;
-      font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;line-height:1.5;
-      background:#171717;color:#e6e6e6
-    }
+    textarea{width:100%;min-height:570px;border:0;outline:none;padding:12px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;line-height:1.5;background:#171717;color:#e6e6e6}
     iframe{width:100%;min-height:570px;border:0;background:#fff}
     .skryt{display:none}
 
@@ -98,14 +78,13 @@
             <button class="tab aktivni" id="tabKod">Kód</button>
             <button class="tab" id="tabNahled">Náhled</button>
           </div>
-          <small style="color:#777;font-weight:700">Přepínání náhledu je přímo u kódu</small>
         </div>
         <textarea id="kod"></textarea>
-        <iframe id="nahled" class="skryt"></iframe>
+        <iframe id="nahledLevy" class="skryt"></iframe>
       </section>
 
       <section class="karta">
-        <h3>Náhled (fixní zrcadlo)</h3>
+        <h3>Živý náhled</h3>
         <iframe id="nahledVpravo"></iframe>
       </section>
     </div>
@@ -210,7 +189,7 @@ scena "Hra" cesta "/" {
     };
 
     const elKod = document.getElementById('kod');
-    const elNahled = document.getElementById('nahled');
+    const elNahledLevy = document.getElementById('nahledLevy');
     const elNahledVpravo = document.getElementById('nahledVpravo');
     const elStav = document.getElementById('stav');
     const elPrepSablony = document.getElementById('prepSablony');
@@ -227,11 +206,11 @@ scena "Hra" cesta "/" {
     function prepniPanel(na){
       if(na === 'nahled'){
         elKod.classList.add('skryt');
-        elNahled.classList.remove('skryt');
+        elNahledLevy.classList.remove('skryt');
         elTabKod.classList.remove('aktivni');
         elTabNahled.classList.add('aktivni');
       }else{
-        elNahled.classList.add('skryt');
+        elNahledLevy.classList.add('skryt');
         elKod.classList.remove('skryt');
         elTabNahled.classList.remove('aktivni');
         elTabKod.classList.add('aktivni');
@@ -243,9 +222,7 @@ scena "Hra" cesta "/" {
     }
 
     function unik(s){
-      return String(s)
-        .replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')
-        .replaceAll('"','&quot;').replaceAll("'",'&#39;');
+      return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
     }
 
     function prevedHodnotu(v){
@@ -260,29 +237,22 @@ scena "Hra" cesta "/" {
     function parseOPIM(kod){
       const radky = kod.replace(/\r/g,'').split('\n');
       let i = 0;
-
-      const ast = {
-        aplikace: 'OPIM', tema: 'svetle', stavy: {}, funkce: {}, stranky: []
-      };
+      const ast = { aplikace:'OPIM', tema:'svetle', stavy:{}, funkce:{}, stranky:[] };
 
       function parsePrikaz(prikaz, cilUzlu){
         let m;
         if((m = prikaz.match(/^nadpis\s+"([^"]+)"$/i))) { cilUzlu.push({typ:'nadpis', text:m[1]}); return true; }
         if((m = prikaz.match(/^text\s+"([^"]+)"$/i))) { cilUzlu.push({typ:'text', text:m[1]}); return true; }
         if((m = prikaz.match(/^odkaz\s+"([^"]+)"\s+na\s+"([^"]+)"$/i))) { cilUzlu.push({typ:'odkaz', text:m[1], cesta:m[2]}); return true; }
-        if((m = prikaz.match(/^vstup\s+([a-zA-Z_]\w*)\s+placeholder\s+"([^"]+)"$/i))) {
-          if(!(m[1] in ast.stavy)) ast.stavy[m[1]] = '';
-          cilUzlu.push({typ:'vstup', vazba:m[1], placeholder:m[2]}); return true;
-        }
+        if((m = prikaz.match(/^vstup\s+([a-zA-Z_]\w*)\s+placeholder\s+"([^"]+)"$/i))) { if(!(m[1] in ast.stavy)) ast.stavy[m[1]]=''; cilUzlu.push({typ:'vstup', vazba:m[1], placeholder:m[2]}); return true; }
         if((m = prikaz.match(/^tlacitko\s+"([^"]+)"\s+pri\s+klik\s*=>\s*(.+)$/i))) { cilUzlu.push({typ:'tlacitko', text:m[1], akce:m[2]}); return true; }
         if((m = prikaz.match(/^volej\s+([a-zA-Z_]\w*)\(\)\s*$/i))) { cilUzlu.push({typ:'volej', funkce:m[1]}); return true; }
         return false;
       }
 
       while(i < radky.length){
-        let r = radky[i].trim();
+        const r = radky[i].trim();
         if(!r || r.startsWith('//') || r.startsWith('#')) { i++; continue; }
-
         let m;
         if((m = r.match(/^aplikace\s+"([^"]+)"$/i))) { ast.aplikace = m[1]; i++; continue; }
         if((m = r.match(/^tema\s+"(svetle|tmave)"$/i))) { ast.tema = m[1]; i++; continue; }
@@ -302,19 +272,16 @@ scena "Hra" cesta "/" {
         }
 
         if((m = r.match(/^(obrazovka|scena)\s+"([^"]+)"\s+cesta\s+"([^"]+)"\s*\{$/i))){
-          const druh = m[1].toLowerCase();
-          const stranka = {druh, nazev:m[2], cesta:m[3], uzly:[]};
+          const stranka = {druh:m[1].toLowerCase(), nazev:m[2], cesta:m[3], uzly:[]};
           i++;
           while(i < radky.length){
             const rr = radky[i].trim();
             if(!rr){ i++; continue; }
             if(rr === '}'){ i++; break; }
-
             let x;
             if(parsePrikaz(rr, stranka.uzly)){ i++; continue; }
-
             if((x = rr.match(/^kdyz\s*\((.+)\)\s*\{$/i))){
-              const podminka = x[1].trim(), deti = []; i++;
+              const deti=[]; const podminka=x[1].trim(); i++;
               while(i < radky.length){
                 const kr = radky[i].trim();
                 if(!kr){ i++; continue; }
@@ -324,9 +291,8 @@ scena "Hra" cesta "/" {
               }
               stranka.uzly.push({typ:'kdyz', podminka, deti}); continue;
             }
-
             if((x = rr.match(/^opakuj\s+(\d+)\s*\{$/i))){
-              const kolik = Number(x[1]), deti = []; i++;
+              const deti=[]; const kolik=Number(x[1]); i++;
               while(i < radky.length){
                 const or = radky[i].trim();
                 if(!or){ i++; continue; }
@@ -336,7 +302,6 @@ scena "Hra" cesta "/" {
               }
               stranka.uzly.push({typ:'opakuj', kolik, deti}); continue;
             }
-
             throw new Error('Neznámý příkaz na řádku '+(i+1)+': '+rr);
           }
           ast.stranky.push(stranka); continue;
@@ -350,70 +315,10 @@ scena "Hra" cesta "/" {
     }
 
     function postavSoubory(ast){
-      const styl = `
-:root{--pozadi:${ast.tema === 'tmave' ? '#101010' : '#f7f7f7'};--karta:${ast.tema === 'tmave' ? '#171717' : '#ffffff'};--text:${ast.tema === 'tmave' ? '#f1f1f1' : '#141414'};--cara:${ast.tema === 'tmave' ? '#2a2a2a' : '#e8e8e8'};}
-*{box-sizing:border-box}
-body{margin:0;background:var(--pozadi);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
-.obal{max-width:920px;margin:0 auto;padding:20px}
-.karta{background:var(--karta);border:1px solid var(--cara);border-radius:16px;padding:16px}
-.meta{font-size:13px;color:#777;margin-bottom:8px}
-h1{margin:0 0 8px 0;font-size:34px}
-p{font-size:18px;line-height:1.45;margin:10px 0}
-.radek{display:flex;gap:10px;margin:10px 0;flex-wrap:wrap}
-button{border:0;border-radius:12px;padding:11px 14px;background:#111;color:#fff;font-weight:700;cursor:pointer}
-input{border:1px solid #ccc;border-radius:12px;padding:11px 12px;min-width:240px}
-a{color:#2451d6;text-decoration:none;font-weight:700;cursor:pointer;display:inline-block;margin-top:8px}
-      `.trim();
-
-      const html = `
-<!doctype html>
-<html lang="cs">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>${unik(ast.aplikace)}</title>
-  <link rel="stylesheet" href="./styl.css" />
-</head>
-<body>
-  <div class="obal"><div class="karta"><div class="meta">${unik(ast.aplikace)} • OPIM ONE CZ export</div><div id="aplikace"></div></div></div>
-  <script src="./aplikace.js"><\/script>
-</body>
-</html>
-      `.trim();
-
-      const js = `
-const AST = ${JSON.stringify(ast, null, 2)};
-const stav = {...AST.stavy};
-let aktualniCesta = AST.stranky[0].cesta;
-
-function sablona(txt){ return String(txt).replace(/\\{([a-zA-Z_]\\w*)\\}/g, (_,k)=> (k in stav ? stav[k] : "")); }
-function vyhodnotPodminku(vyraz){
-  const cisty = vyraz.replace(/\\bpravda\\b/g,'true').replace(/\\bnepravda\\b/g,'false').replace(/\\b([a-zA-Z_]\\w*)\\b/g,(m)=>{ if(m==='true'||m==='false') return m; if(Object.prototype.hasOwnProperty.call(stav,m)) return JSON.stringify(stav[m]); return m; });
-  try{ return !!Function('return (' + cisty + ')')(); }catch{return false;}
-}
-function provedVyraz(kod){
-  const a = kod.trim(); let m;
-  m = a.match(/^jdi\\("([^"]+)"\\)$/); if(m){ aktualniCesta = m[1]; vykresli(); return; }
-  m = a.match(/^([a-zA-Z_]\\w*)\\s*=\\s*!([a-zA-Z_]\\w*)$/); if(m){ stav[m[1]] = !stav[m[2]]; vykresli(); return; }
-  m = a.match(/^([a-zA-Z_]\\w*)\\s*=\\s*([a-zA-Z_]\\w*)\\s*\\+\\s*(-?\\d+(?:\\.\\d+)?)$/); if(m){ stav[m[1]] = Number(stav[m[2]]||0)+Number(m[3]); vykresli(); return; }
-  m = a.match(/^([a-zA-Z_]\\w*)\\s*=\\s*"([^"]*)"$/); if(m){ stav[m[1]] = m[2]; vykresli(); return; }
-  m = a.match(/^([a-zA-Z_]\\w*)\\s*=\\s*(pravda|nepravda|-?\\d+(?:\\.\\d+)?)$/); if(m){ const v = m[2]==='pravda'?true:(m[2]==='nepravda'?false:Number(m[2])); stav[m[1]]=v; vykresli(); return; }
-}
-function spustFunkci(nazev){ const telo = AST.funkce[nazev]; if(!telo) return; for(const p of telo){ if(p.typ==='volej') spustFunkci(p.funkce); if(p.typ==='vyraz') provedVyraz(p.kod); }}
-function vykresliUzel(u,koren){
-  if(u.typ==='nadpis'){ const h=document.createElement('h1'); h.textContent=sablona(u.text); koren.appendChild(h); return; }
-  if(u.typ==='text'){ const p=document.createElement('p'); p.textContent=sablona(u.text); koren.appendChild(p); return; }
-  if(u.typ==='vstup'){ const r=document.createElement('div'); r.className='radek'; const inp=document.createElement('input'); inp.placeholder=u.placeholder; inp.value=stav[u.vazba]??''; inp.oninput=(e)=>{ stav[u.vazba]=e.target.value; vykresli(); }; r.appendChild(inp); koren.appendChild(r); return; }
-  if(u.typ==='tlacitko'){ const r=document.createElement('div'); r.className='radek'; const b=document.createElement('button'); b.textContent=sablona(u.text); b.onclick=()=>{ const akce=u.akce.trim(); const m=akce.match(/^volej\\s+([a-zA-Z_]\\w*)\\(\\)$/); if(m){ spustFunkci(m[1]); return; } provedVyraz(akce); }; r.appendChild(b); koren.appendChild(r); return; }
-  if(u.typ==='odkaz'){ const a=document.createElement('a'); a.textContent=sablona(u.text); a.onclick=()=>{ aktualniCesta=u.cesta; vykresli(); }; koren.appendChild(a); return; }
-  if(u.typ==='kdyz'){ if(vyhodnotPodminku(u.podminka)) u.deti.forEach(d=>vykresliUzel(d,koren)); return; }
-  if(u.typ==='opakuj'){ for(let i=0;i<u.kolik;i++) u.deti.forEach(d=>vykresliUzel(d,koren)); return; }
-}
-function vykresli(){ const cil=document.getElementById('aplikace'); cil.innerHTML=''; const stranka=AST.stranky.find(s=>s.cesta===aktualniCesta)||AST.stranky[0]; stranka.uzly.forEach(u=>vykresliUzel(u,cil)); }
-vykresli();
-      `.trim();
-
-      return { html, css: styl, js };
+      const styl = `:root{--pozadi:${ast.tema==='tmave'?'#101010':'#f7f7f7'};--karta:${ast.tema==='tmave'?'#171717':'#ffffff'};--text:${ast.tema==='tmave'?'#f1f1f1':'#141414'};--cara:${ast.tema==='tmave'?'#2a2a2a':'#e8e8e8'};}*{box-sizing:border-box}body{margin:0;background:var(--pozadi);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}.obal{max-width:920px;margin:0 auto;padding:20px}.karta{background:var(--karta);border:1px solid var(--cara);border-radius:16px;padding:16px}.meta{font-size:13px;color:#777;margin-bottom:8px}h1{margin:0 0 8px 0;font-size:34px}p{font-size:18px;line-height:1.45;margin:10px 0}.radek{display:flex;gap:10px;margin:10px 0;flex-wrap:wrap}button{border:0;border-radius:12px;padding:11px 14px;background:#111;color:#fff;font-weight:700;cursor:pointer}input{border:1px solid #ccc;border-radius:12px;padding:11px 12px;min-width:240px}a{color:#2451d6;text-decoration:none;font-weight:700;cursor:pointer;display:inline-block;margin-top:8px}`;
+      const html = `<!doctype html><html lang="cs"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><title>${unik(ast.aplikace)}</title><link rel="stylesheet" href="./styl.css" /></head><body><div class="obal"><div class="karta"><div class="meta">${unik(ast.aplikace)} • OPIM ONE CZ export</div><div id="aplikace"></div></div></div><script src="./aplikace.js"><\/script></body></html>`;
+      const js = `const AST=${JSON.stringify(ast)};const stav={...AST.stavy};let aktualniCesta=AST.stranky[0].cesta;function sablona(t){return String(t).replace(/\\{([a-zA-Z_]\\w*)\\}/g,(_,k)=>(k in stav?stav[k]:""));}function vyhodnotPodminku(v){const c=v.replace(/\\bpravda\\b/g,'true').replace(/\\bnepravda\\b/g,'false').replace(/\\b([a-zA-Z_]\\w*)\\b/g,(m)=>{if(m==='true'||m==='false')return m;if(Object.prototype.hasOwnProperty.call(stav,m))return JSON.stringify(stav[m]);return m;});try{return !!Function('return ('+c+')')();}catch{return false;}}function provedVyraz(k){const a=k.trim();let m;m=a.match(/^jdi\\("([^"]+)"\\)$/);if(m){aktualniCesta=m[1];vykresli();return;}m=a.match(/^([a-zA-Z_]\\w*)\\s*=\\s*!([a-zA-Z_]\\w*)$/);if(m){stav[m[1]]=!stav[m[2]];vykresli();return;}m=a.match(/^([a-zA-Z_]\\w*)\\s*=\\s*([a-zA-Z_]\\w*)\\s*\\+\\s*(-?\\d+(?:\\.\\d+)?)$/);if(m){stav[m[1]]=Number(stav[m[2]]||0)+Number(m[3]);vykresli();return;}m=a.match(/^([a-zA-Z_]\\w*)\\s*=\\s*"([^"]*)"$/);if(m){stav[m[1]]=m[2];vykresli();return;}m=a.match(/^([a-zA-Z_]\\w*)\\s*=\\s*(pravda|nepravda|-?\\d+(?:\\.\\d+)?)$/);if(m){stav[m[1]]=m[2]==='pravda'?true:(m[2]==='nepravda'?false:Number(m[2]));vykresli();return;}}function spustFunkci(n){const t=AST.funkce[n];if(!t)return;for(const p of t){if(p.typ==='volej')spustFunkci(p.funkce);if(p.typ==='vyraz')provedVyraz(p.kod);}}function uzel(u,k){if(u.typ==='nadpis'){const h=document.createElement('h1');h.textContent=sablona(u.text);k.appendChild(h);return;}if(u.typ==='text'){const p=document.createElement('p');p.textContent=sablona(u.text);k.appendChild(p);return;}if(u.typ==='vstup'){const r=document.createElement('div');r.className='radek';const i=document.createElement('input');i.placeholder=u.placeholder;i.value=stav[u.vazba]??'';i.oninput=(e)=>{stav[u.vazba]=e.target.value;vykresli();};r.appendChild(i);k.appendChild(r);return;}if(u.typ==='tlacitko'){const r=document.createElement('div');r.className='radek';const b=document.createElement('button');b.textContent=sablona(u.text);b.onclick=()=>{const a=u.akce.trim();const m=a.match(/^volej\\s+([a-zA-Z_]\\w*)\\(\\)$/);if(m){spustFunkci(m[1]);return;}provedVyraz(a);};r.appendChild(b);k.appendChild(r);return;}if(u.typ==='odkaz'){const a=document.createElement('a');a.textContent=sablona(u.text);a.onclick=()=>{aktualniCesta=u.cesta;vykresli();};k.appendChild(a);return;}if(u.typ==='kdyz'){if(vyhodnotPodminku(u.podminka))u.deti.forEach(d=>uzel(d,k));return;}if(u.typ==='opakuj'){for(let i=0;i<u.kolik;i++)u.deti.forEach(d=>uzel(d,k));return;}}function vykresli(){const c=document.getElementById('aplikace');c.innerHTML='';const s=AST.stranky.find(x=>x.cesta===aktualniCesta)||AST.stranky[0];s.uzly.forEach(u=>uzel(u,c));}vykresli();`;
+      return {html, css:styl, js};
     }
 
     function nahledDoIframe(iframe, soubory){
@@ -424,7 +329,7 @@ vykresli();
     function sestav(){
       const ast = parseOPIM(elKod.value);
       const soubory = postavSoubory(ast);
-      nahledDoIframe(elNahled, soubory);
+      nahledDoIframe(elNahledLevy, soubory);
       nahledDoIframe(elNahledVpravo, soubory);
       return soubory;
     }
@@ -479,7 +384,7 @@ vykresli();
       elKod.value = ulozeno || START_CISTE;
       prepniPanel('kod');
       akceSpustit();
-      zprava('Hotovo: přepínání Kód/Náhled je přímo u editoru.');
+      zprava('Hotovo: vpravo je živý náhled, text byl odstraněn.');
     })();
   </script>
 </body>
