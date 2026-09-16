@@ -184,7 +184,7 @@ scena "Hra" cesta "/" {
     };
 
     const elKod = document.getElementById('kod');
-    const elNahledLevy = document.getElementById('nahledLevy');
+    let elNahledLevy = document.getElementById('nahledLevy');
     const elStav = document.getElementById('stav');
     const elPrepSablony = document.getElementById('prepSablony');
     const elPanelSablony = document.getElementById('panelSablony');
@@ -197,6 +197,17 @@ scena "Hra" cesta "/" {
 
     let sablonyZapnuto = false;
     let autoNahledTimeout = null;
+    let chybaZNahledu = null;
+
+    window.addEventListener('message', (e)=>{
+      if(!e || !e.data || e.data.typ !== 'opimNahled') return;
+      if(e.data.stav === 'chyba'){
+        chybaZNahledu = e.data.zprava || 'Neznámá chyba v náhledu.';
+        zprava('Chyba náhledu: '+chybaZNahledu, 'chyba');
+      }else{
+        chybaZNahledu = null;
+      }
+    });
 
     function prepniPanel(na){
       if(na === 'nahled'){
@@ -204,6 +215,16 @@ scena "Hra" cesta "/" {
         elNahledLevy.classList.remove('skryt');
         elTabKod.classList.remove('aktivni');
         elTabNahled.classList.add('aktivni');
+        try{
+          const vysledek = sestavNahled();
+          if(vysledek.chyby.length){
+            zprava('Náhled aktualizován částečně (přeskočeno chyb: '+vysledek.chyby.length+').', 'chyba');
+          }else{
+            zprava('Náhled automaticky aktualizován.');
+          }
+        }catch(e){
+          zprava('Chyba: '+e.message, 'chyba');
+        }
       }else{
         elNahledLevy.classList.add('skryt');
         elKod.classList.remove('skryt');
@@ -229,10 +250,25 @@ scena "Hra" cesta "/" {
       return t;
     }
 
-    function parseOPIM(kod){
+    function parseOPIM(kod, moznosti = {}){
+      const tolerantni = !!moznosti.tolerantni;
       const radky = kod.replace(/\r/g,'').split('\n');
       let i = 0;
       const ast = { aplikace:'OPIM', tema:'svetle', stavy:{}, funkce:{}, stranky:[] };
+      const chyby = [];
+
+      function zaznamenejChybu(text){
+        if(tolerantni){ chyby.push(text); return; }
+        throw new Error(text);
+      }
+
+      function jeNovaTopUroven(rr){
+        return /^aplikace\s+"([^"]+)"$/i.test(rr)
+          || /^tema\s+"(svetle|tmave)"$/i.test(rr)
+          || /^stav\s+([a-zA-Z_]\w*)\s*:\s*(cislo|text|pravda)\s*=\s*(.+)$/i.test(rr)
+          || /^funkce\s+([a-zA-Z_]\w*)\(\)\s*\{$/i.test(rr)
+          || /^(obrazovka|scena)\s+"([^"]+)"\s+cesta\s+"([^"]+)"\s*\{$/i.test(rr);
+      }
 
       function parsePrikaz(prikaz, cilUzlu){
         let m;
@@ -255,57 +291,87 @@ scena "Hra" cesta "/" {
 
         if((m = r.match(/^funkce\s+([a-zA-Z_]\w*)\(\)\s*\{$/i))){
           const nazev = m[1], telo = []; i++;
+          let uzavreno = false;
           while(i < radky.length){
             const rr = radky[i].trim();
             if(!rr){ i++; continue; }
-            if(rr === '}'){ i++; break; }
+            if(rr === '}'){ i++; uzavreno = true; break; }
+            if(tolerantni && jeNovaTopUroven(rr)){
+              zaznamenejChybu('Funkce "'+nazev+'" se ukončila nouzově na řádku '+(i+1)+' (chybí }).');
+              break;
+            }
             if(parsePrikaz(rr, telo)){ i++; continue; }
             if(/^([a-zA-Z_]\w*)\s*=\s*(.+)$/.test(rr)){ telo.push({typ:'vyraz', kod:rr}); i++; continue; }
-            throw new Error('Neznámý příkaz ve funkci na řádku '+(i+1)+': '+rr);
+            zaznamenejChybu('Neznámý příkaz ve funkci na řádku '+(i+1)+': '+rr);
+            i++;
           }
+          if(!uzavreno) zaznamenejChybu('Neuzavřená funkce "'+nazev+'" (chybí }).');
           ast.funkce[nazev] = telo; continue;
         }
 
         if((m = r.match(/^(obrazovka|scena)\s+"([^"]+)"\s+cesta\s+"([^"]+)"\s*\{$/i))){
           const stranka = {druh:m[1].toLowerCase(), nazev:m[2], cesta:m[3], uzly:[]};
           i++;
+          let uzavreno = false;
           while(i < radky.length){
             const rr = radky[i].trim();
             if(!rr){ i++; continue; }
-            if(rr === '}'){ i++; break; }
+            if(rr === '}'){ i++; uzavreno = true; break; }
+            if(tolerantni && jeNovaTopUroven(rr)){
+              zaznamenejChybu('Obrazovka/scéna "'+stranka.nazev+'" se ukončila nouzově na řádku '+(i+1)+' (chybí }).');
+              break;
+            }
             let x;
             if(parsePrikaz(rr, stranka.uzly)){ i++; continue; }
             if((x = rr.match(/^kdyz\s*\((.+)\)\s*\{$/i))){
               const deti=[]; const podminka=x[1].trim(); i++;
+              let blokUzavren = false;
               while(i < radky.length){
                 const kr = radky[i].trim();
                 if(!kr){ i++; continue; }
-                if(kr === '}'){ i++; break; }
+                if(kr === '}'){ i++; blokUzavren = true; break; }
+                if(tolerantni && jeNovaTopUroven(kr)){
+                  zaznamenejChybu('Blok kdyz se ukončil nouzově na řádku '+(i+1)+' (chybí }).');
+                  break;
+                }
                 if(parsePrikaz(kr, deti)){ i++; continue; }
-                throw new Error('Neznámý příkaz v bloku kdyz na řádku '+(i+1)+': '+kr);
+                zaznamenejChybu('Neznámý příkaz v bloku kdyz na řádku '+(i+1)+': '+kr);
+                i++;
               }
+              if(!blokUzavren) zaznamenejChybu('Neuzavřený blok kdyz na řádku '+(i+1)+'.');
               stranka.uzly.push({typ:'kdyz', podminka, deti}); continue;
             }
             if((x = rr.match(/^opakuj\s+(\d+)\s*\{$/i))){
               const deti=[]; const kolik=Number(x[1]); i++;
+              let blokUzavren = false;
               while(i < radky.length){
                 const or = radky[i].trim();
                 if(!or){ i++; continue; }
-                if(or === '}'){ i++; break; }
+                if(or === '}'){ i++; blokUzavren = true; break; }
+                if(tolerantni && jeNovaTopUroven(or)){
+                  zaznamenejChybu('Blok opakuj se ukončil nouzově na řádku '+(i+1)+' (chybí }).');
+                  break;
+                }
                 if(parsePrikaz(or, deti)){ i++; continue; }
-                throw new Error('Neznámý příkaz v bloku opakuj na řádku '+(i+1)+': '+or);
+                zaznamenejChybu('Neznámý příkaz v bloku opakuj na řádku '+(i+1)+': '+or);
+                i++;
               }
+              if(!blokUzavren) zaznamenejChybu('Neuzavřený blok opakuj na řádku '+(i+1)+'.');
               stranka.uzly.push({typ:'opakuj', kolik, deti}); continue;
             }
-            throw new Error('Neznámý příkaz na řádku '+(i+1)+': '+rr);
+            zaznamenejChybu('Neznámý příkaz na řádku '+(i+1)+': '+rr);
+            i++;
           }
+          if(!uzavreno) zaznamenejChybu('Neuzavřená obrazovka/scéna "'+stranka.nazev+'" (chybí }).');
           ast.stranky.push(stranka); continue;
         }
 
-        throw new Error('Neznámý příkaz na řádku '+(i+1)+': '+r);
+        zaznamenejChybu('Neznámý příkaz na řádku '+(i+1)+': '+r);
+        i++;
       }
 
-      if(!ast.stranky.length) throw new Error('Chybí obrazovka nebo scéna.');
+      if(!ast.stranky.length) zaznamenejChybu('Chybí obrazovka nebo scéna.');
+      if(tolerantni) return {ast, chyby};
       return ast;
     }
 
@@ -316,33 +382,51 @@ scena "Hra" cesta "/" {
       return {html, css:styl, js};
     }
 
-    function nahledDoIframe(iframe, soubory){
-      const src = `<!doctype html><html><head><meta charset="utf-8"/><style>${soubory.css}</style></head><body>${soubory.html.replace('<link rel="stylesheet" href="./styl.css" />','').replace('<script src="./aplikace.js"><\\/script>', `<script>${soubory.js}<\\/script>`)}</body></html>`;
-      iframe.srcdoc = src;
+    function nahledDoIframe(soubory){
+      const novyNahled = document.createElement('iframe');
+      novyNahled.id = 'nahledLevy';
+      novyNahled.className = elNahledLevy.className;
+      const bezpecnyJs = soubory.js.replace(/<\/script/gi, '<\\/script');
+      const bezpecneHtml = soubory.html.replace(/<\/script/gi, '<\\/script');
+      const runtime = `try{${bezpecnyJs};parent.postMessage({typ:'opimNahled',stav:'ok'},'*');}catch(e){document.body.innerHTML='';parent.postMessage({typ:'opimNahled',stav:'chyba',zprava:(e&&e.message?e.message:String(e))},'*');}`;
+      const src = `<!doctype html><html><head><meta charset="utf-8"/><style>${soubory.css}</style></head><body>${bezpecneHtml.replace('<link rel="stylesheet" href="./styl.css" />','').replace('<script src="./aplikace.js"><\\/script>', `<script>${runtime}<\\/script>`)}</body></html>`;
+      novyNahled.srcdoc = src;
+      elNahledLevy.replaceWith(novyNahled);
+      elNahledLevy = novyNahled;
     }
 
     function sestav(){
       const ast = parseOPIM(elKod.value);
       const soubory = postavSoubory(ast);
-      nahledDoIframe(elNahledLevy, soubory);
+      nahledDoIframe(soubory);
       return soubory;
     }
 
-    function akceSpustit(){ try{ sestav(); zprava('Spuštěno bez chyb.'); } catch(e){ zprava('Chyba: '+e.message, 'chyba'); } }
+    function sestavNahled(){
+      const vysledek = parseOPIM(elKod.value, {tolerantni:true});
+      if(!vysledek.ast.stranky.length){
+        throw new Error(vysledek.chyby[0] || 'Chybí obrazovka nebo scéna.');
+      }
+      const soubory = postavSoubory(vysledek.ast);
+      nahledDoIframe(soubory);
+      return {soubory, chyby:vysledek.chyby};
+    }
+
+    function akceSpustit(){ try{ sestav(); zprava('Spuštěno bez chyb.'); return true; } catch(e){ zprava('Chyba: '+e.message, 'chyba'); return false; } }
     function akceUlozit(){ localStorage.setItem('opim_one_cz_kod', elKod.value); zprava('Uloženo do localStorage.'); }
 
     function autoAktualizaceNahledu(){
       clearTimeout(autoNahledTimeout);
       autoNahledTimeout = setTimeout(()=>{
         try{
-          sestav();
-          if(!elNahledLevy.classList.contains('skryt')){
+          const vysledek = sestavNahled();
+          if(vysledek.chyby.length){
+            zprava('Náhled aktualizován částečně (přeskočeno chyb: '+vysledek.chyby.length+').', 'chyba');
+          }else{
             zprava('Náhled automaticky aktualizován.');
           }
         }catch(e){
-          if(!elNahledLevy.classList.contains('skryt')){
-            zprava('Chyba: '+e.message, 'chyba');
-          }
+          zprava('Chyba: '+e.message, 'chyba');
         }
       }, 180);
     }
@@ -395,8 +479,9 @@ scena "Hra" cesta "/" {
       const ulozeno = localStorage.getItem('opim_one_cz_kod');
       elKod.value = ulozeno || START_CISTE;
       prepniPanel('kod');
-      akceSpustit();
-      zprava('Hotovo: náhled u kódu se aktualizuje automaticky při psaní.');
+      if(akceSpustit()){
+        zprava('Hotovo: náhled u kódu se aktualizuje automaticky při psaní.');
+      }
     })();
   </script>
 </body>
