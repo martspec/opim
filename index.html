@@ -184,7 +184,7 @@ scena "Hra" cesta "/" {
     };
 
     const elKod = document.getElementById('kod');
-    const elNahledLevy = document.getElementById('nahledLevy');
+    let elNahledLevy = document.getElementById('nahledLevy');
     const elStav = document.getElementById('stav');
     const elPrepSablony = document.getElementById('prepSablony');
     const elPanelSablony = document.getElementById('panelSablony');
@@ -371,15 +371,20 @@ scena "Hra" cesta "/" {
       return {html, css:styl, js};
     }
 
-    function nahledDoIframe(iframe, soubory){
+    function nahledDoIframe(soubory){
+      const novyNahled = document.createElement('iframe');
+      novyNahled.id = 'nahledLevy';
+      novyNahled.className = elNahledLevy.className;
       const src = `<!doctype html><html><head><meta charset="utf-8"/><style>${soubory.css}</style></head><body>${soubory.html.replace('<link rel="stylesheet" href="./styl.css" />','').replace('<script src="./aplikace.js"><\\/script>', `<script>${soubory.js}<\\/script>`)}</body></html>`;
-      iframe.srcdoc = src;
+      novyNahled.srcdoc = src;
+      elNahledLevy.replaceWith(novyNahled);
+      elNahledLevy = novyNahled;
     }
 
     function sestav(){
       const ast = parseOPIM(elKod.value);
       const soubory = postavSoubory(ast);
-      nahledDoIframe(elNahledLevy, soubory);
+      nahledDoIframe(soubory);
       return soubory;
     }
 
@@ -389,7 +394,7 @@ scena "Hra" cesta "/" {
         throw new Error(vysledek.chyby[0] || 'Chybí obrazovka nebo scéna.');
       }
       const soubory = postavSoubory(vysledek.ast);
-      nahledDoIframe(elNahledLevy, soubory);
+      nahledDoIframe(soubory);
       return {soubory, chyby:vysledek.chyby};
     }
 
